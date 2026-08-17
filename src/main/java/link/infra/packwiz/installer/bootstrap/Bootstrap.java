@@ -50,9 +50,15 @@ public class Bootstrap {
 			});
 		}
 
+		// Some launchers (e.g. Prism Launcher/MultiMC on macOS, via -Xdock:name=...) append JVM-only
+		// arguments to the program args instead of the JVM invocation. packwiz-installer's own CLI
+		// parser doesn't recognize them and throws, crashing the installer, so strip them here before
+		// they get forwarded downstream.
+		String[] forwardedArgs = stripJvmArgs(args);
+
 		if (skipUpdate) {
 			try {
-				LoadJAR.start(args, jarPath);
+				LoadJAR.start(forwardedArgs, jarPath);
 			} catch (ClassNotFoundException e) {
 				showError(e, "packwiz-installer cannot be found, or there was an error loading it:");
 				System.exit(1);
@@ -70,7 +76,7 @@ public class Bootstrap {
 		}
 
 		try {
-			LoadJAR.start(args, jarPath);
+			LoadJAR.start(forwardedArgs, jarPath);
 		} catch (Exception e) {
 			showError(e, "There was an error loading packwiz-installer (did it download properly?):");
 			System.exit(1);
@@ -198,6 +204,22 @@ public class Bootstrap {
 			argsList.add(arg);
 		}
 
+		return argsList.toArray(new String[0]);
+	}
+
+	// Drop JVM-only options (-Xmx2G, -Xdock:name=..., -Dfoo=bar, -javaagent:..., -agentlib:...) that
+	// some launchers mistakenly place after the program args rather than passing them to the JVM
+	// invocation itself. Unlike filterArgs() above, this doesn't whitelist against a known option set,
+	// since packwiz-installer defines its own CLI options (--pack-folder, --timeout, etc.) that the
+	// bootstrapper doesn't know about and shouldn't strip.
+	public static String[] stripJvmArgs(String[] args) {
+		List<String> argsList = new ArrayList<>(args.length);
+		for (String arg : args) {
+			if (arg.startsWith("-X") || arg.startsWith("-D") || arg.startsWith("-javaagent:") || arg.startsWith("-agentlib:")) {
+				continue;
+			}
+			argsList.add(arg);
+		}
 		return argsList.toArray(new String[0]);
 	}
 

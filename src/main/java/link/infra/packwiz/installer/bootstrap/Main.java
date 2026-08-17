@@ -50,10 +50,14 @@ public class Main {
 			// TODO: parse args (packwiz.chainload.args.0?)
 			List<String> bootstrapArgs = Collections.emptyList();
 
+			// Strip stray JVM-only args (see Bootstrap.stripJvmArgs) before forwarding to the
+			// chainloaded class/jar, which has its own CLI parser that doesn't recognize them.
+			String[] forwardedArgs = Bootstrap.stripJvmArgs(args);
+
 			if (chainloadClass != null) {
-				ChainloadHandler.startChainloadClass(chainloadClass, bootstrapArgs, args);
+				ChainloadHandler.startChainloadClass(chainloadClass, bootstrapArgs, forwardedArgs);
 			} else {
-				ChainloadHandler.startChainloadJar(chainloadJar, bootstrapArgs, args);
+				ChainloadHandler.startChainloadJar(chainloadJar, bootstrapArgs, forwardedArgs);
 			}
 			return true;
 		}
